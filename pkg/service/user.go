@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/BoyYangZai/go-server-lib/pkg/database"
@@ -19,9 +20,28 @@ type User struct {
 	EmailVerify     int       `gorm:"type:tinyint;not null;default:0" json:"email_verify"`
 	EmailVerifyCode string    `gorm:"type:varchar(80);not null" json:"email_verify_code"`
 	AvatarURL       string    `gorm:"type:varchar(255);not null" json:"avatar_url"`
+	Roles           string    `gorm:"type:varchar(80);not null" json:"roles"`
+	Position        string    `gorm:"type:varchar(80);not null" json:"position"`
+	Age             string    `gorm:"type:varchar(255);not null" json:"age"`
+	Gender          string    `gorm:"type:varchar(255);not null" json:"gender"`
 	Extra           string    `gorm:"type:varchar(255);not null" json:"extra"`
 }
 
+func CheckUsernameIsExisted(username string) bool {
+	db := database.Db
+	user := User{}
+	result := db.Where("username = ?", username).First(&user)
+	if result.Error == gorm.ErrRecordNotFound {
+		// 表示未找到匹配的记录
+		fmt.Printf("Username '%s' not found in the users table\n", username)
+		return false
+	} else if result.Error != nil {
+		// 发生其他错误
+		fmt.Println("Query error:", result.Error)
+		return false
+	}
+	return true
+}
 func UpdateVerifyCode(email string, code string) {
 	db := database.Db
 	user := User{}
@@ -57,13 +77,13 @@ func UpdOneKeyWhereAnoKey(whereKey string, whereKeyValue any, changeKey string, 
 	}
 }
 
-func MatchEmailAndKey(email string, keyValue string, matchKey string) (bool, User) {
+func MatchEmailAndKey(username string, keyValue string, matchKey string) (bool, User) {
 	db := database.Db
 	user := User{}
-	result := db.Where("email = ?", email).First(&user)
+	result := db.Where("username = ?", username).First(&user)
 	if result.Error == gorm.ErrRecordNotFound {
 		// 表示未找到匹配的记录
-		fmt.Printf("Email '%s' not found in the users table\n", email)
+		fmt.Printf("Username '%s' not found in the users table\n", username)
 		return false, user
 	} else if result.Error != nil {
 		// 发生其他错误
@@ -79,12 +99,12 @@ func MatchEmailAndKey(email string, keyValue string, matchKey string) (bool, Use
 	return fieldValue == keyValue, user
 }
 
-func InitUser(email string, password string) {
+func InitUser(user User) {
 	db := database.Db
-	user := User{}
-	db.Where("email = ?", email).First(&user)
-	username := GenerateRandomString(10)
-	db.Model(&user).Updates(User{Username: username, CreatedTime: time.Now(), Password: password, EmailVerify: 1, AvatarURL: getRandomAvatarURL(username)})
+	roles := strings.Split(user.Roles, ",")
+	user.Roles = strings.Join(roles, "&")
+	println(user.Roles, 11)
+	db.Create(&user)
 	db.Save(&user)
 }
 
@@ -110,4 +130,11 @@ func getField(obj interface{}, fieldName string) (interface{}, bool) {
 	}
 
 	return field.Interface(), true
+}
+
+func List() []User {
+	db := database.Db
+	users := []User{}
+	db.Find(&users)
+	return users
 }
