@@ -1,0 +1,12 @@
+name : yang
+
+
+database:
+  host: "127.0.0.1"
+  port: "3306"
+  username: "root"
+  password: "08213101" # your password
+  database: "goApp"
+
+jwt:
+  secret_key: "A_SECRET_KEY"
